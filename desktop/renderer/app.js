@@ -25,9 +25,9 @@ const PLAT = {
 };
 
 // ================= SETUP =================
-const SETUP = ['welcome', 'github', 'claude', 'accounts', 'ready'];
-const SETUP_LABEL = { welcome: 'Welcome', github: 'Your copy', claude: 'Claude', accounts: 'Accounts', ready: 'Done' };
-const stepDone = (k) => ({ github: S.github, claude: !!S.accounts.claude, accounts: Object.keys(PLAT).some(p => S.accounts[p]) }[k]);
+const SETUP = ['welcome', 'github', 'claude', 'accounts', 'topic', 'ready'];
+const SETUP_LABEL = { welcome: 'Welcome', github: 'Your copy', claude: 'Claude', accounts: 'Accounts', topic: 'Video topic', ready: 'Done' };
+const stepDone = (k) => ({ github: S.github, claude: !!S.accounts.claude, accounts: Object.keys(PLAT).some(p => S.accounts[p]), topic: !!S.topicSet }[k]);
 
 function setupShell(inner) {
   const i = SETUP.indexOf(view);
@@ -41,7 +41,7 @@ function setupShell(inner) {
     <main class="main"><div class="wrap">${inner}</div></main></div>`;
   app.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { if (!b.disabled) go(b.dataset.go); });
 }
-const canGo = (k) => k === 'welcome' || (k === 'github') || (S.github && (k !== 'ready' || S.accounts.claude));
+const canGo = (k) => k === 'welcome' || (k === 'github') || (S.github && (!['topic', 'ready'].includes(k) || S.accounts.claude));
 
 function go(v) { view = v; render(); }
 
@@ -157,9 +157,61 @@ function renderAccounts() {
   ${Object.keys(PLAT).map(p => platCard(p)).join('')}
   <div class="row" style="margin-top:20px"><button class="btn big" id="next">${Object.keys(PLAT).some(p => S.accounts[p]) ? 'Next' : 'Skip for now'}</button></div>`);
   bindPlat();
-  $('#next').onclick = () => go('ready');
+  $('#next').onclick = () => go('topic');
   if ($('#imp')) $('#imp').onclick = async () => { const k = await window.va.importTeamKeys(); if (k) { S.teamKeys = k; render(); toast('Team keys imported ✓'); } };
   if ($('#adv')) $('#adv').onclick = () => { view = 'teamkeys'; render(); };
+}
+
+// ================= VIDEO TOPIC =================
+const PRESETS = [
+  ['Educational stories', `Educational storytelling, with safety built in. Each video tells a short, true, gripping story or answers a question people actually wonder about, and the viewer walks away knowing something useful.
+
+Mix three kinds of video:
+1. How your body works: everyday mysteries explained plainly (what hiccups are, why we yawn, what goosebumps do), with a practical takeaway.
+2. True stories from history and science, like Ötzi the Iceman, the 5,300-year-old man hikers found frozen in the Alps.
+3. Staying safe: real risks explained calmly, like how people get scammed or approached by strangers on games like Roblox, how to spot it, and what to do (block, report, tell a trusted adult).
+
+Audience: curious teens and adults, and parents watching with kids. Family-friendly.`],
+  ['Safety for kids & parents', `Safety videos for kids, teens and parents. Online safety (scams, strangers in games like Roblox, sharing personal info, cyberbullying), home safety, outdoor and weather safety, and first-aid basics. Calm, practical and never scary: always end with clear steps to take. Family-friendly.`],
+  ['Science explainers', `Short science explainers: one question a viewer would actually ask (why is the sky blue, how do vaccines work, what is a black hole), answered plainly with a clear mechanism and a surprising fact.`],
+  ['History mysteries', `True stories from history and archaeology told like mysteries: famous discoveries, lost cities, preserved bodies like Ötzi the Iceman, shipwrecks. Hook, mystery, what scientists found out. Accurate and respectful.`],
+  ['Zombies & scary stories', `Second-person survival stories ("You were sitting in seat 23C when…"), like a zombie outbreak on a plane, a cruise ship or an oil rig, or an alien invasion. Run them as series: each part continues the last and ends on a cliffhanger. Every survival detail (water, food, injuries, physics) follows real science. Spooky and tense, never gory.`],
+];
+const FOCUS_RE = /<!-- FOCUS START -->[\s\S]*?<!-- FOCUS END -->/;
+async function renderTopic(inDash) {
+  const shell = inDash ? dashShell : setupShell;
+  shell(`<h1>Video topic</h1><p class="muted"><span class="spin"></span> Loading…</p>`);
+  let brief = '';
+  try { brief = await window.va.readFile({ path: 'autopilot/channel.md' }); } catch (e) { toast(e.message, 6000); }
+  if (!['topic', 'channel'].includes(view)) return;
+  const m = brief.match(FOCUS_RE);
+  const current = m ? m[0].replace(/<!-- FOCUS (START|END) -->/g, '').replace(/^\s*## What this channel is about\s*/, '').trim() : PRESETS[0][1];
+  shell(`<h1>${inDash ? 'Video topic' : 'Step 4 · What to make'}</h1>
+    <p>Tell Claude what your videos should be about. Pick a starting point or write your own, like <i>"make content about zombies and scary stories"</i>. You can change it any time.</p>
+    <div class="card">
+      <label class="f">Start from</label>
+      <div class="row" style="margin-bottom:14px">${PRESETS.map(([n], i) => `<button class="btn ghost small" data-pre="${i}">${esc(n)}</button>`).join('')}</div>
+      <label class="f" for="focus">What should your videos be about?</label>
+      <textarea id="focus" style="min-height:220px;font-family:var(--sans);font-size:15px">${esc(current)}</textarea>
+      <label class="switch" style="margin-top:12px"><input type="checkbox" id="clr"><span class="t"></span>Also clear my list of upcoming video ideas (so Claude starts fresh on this topic)</label>
+      <div class="row" style="margin-top:14px"><button class="btn" id="save">${inDash ? 'Save' : 'Save and continue'}</button>
+        ${inDash ? `<button class="link" id="raw">Edit the full brief and safety rules</button>` : ''}</div>
+      <div class="err"></div>
+    </div>
+    <p class="muted">Facts are always checked, and videos stay family-friendly with no gore, whatever the topic.</p>`);
+  app.querySelectorAll('[data-pre]').forEach(b => b.onclick = () => { $('#focus').value = PRESETS[+b.dataset.pre][1]; $('#clr').checked = true; });
+  $('#focus').oninput = () => { $('#clr').checked = true; };
+  if ($('#raw')) $('#raw').onclick = () => go('channel-raw');
+  $('#save').onclick = (e) => busy(e.currentTarget, async () => {
+    const text = $('#focus').value.trim(); if (!text) throw new Error('Write a sentence about what to make.');
+    const block = `<!-- FOCUS START -->\n## What this channel is about\n${text}\n<!-- FOCUS END -->`;
+    const next = FOCUS_RE.test(brief) ? brief.replace(FOCUS_RE, () => block) : `# Channel brief\n\n${block}\n\n${brief}`;
+    await window.va.writeFile({ path: 'autopilot/channel.md', text: next });
+    if ($('#clr').checked) await window.va.writeFile({ path: 'autopilot/topics.txt',
+      text: '# One video idea per line. The autopilot takes the top line each run and deletes it.\n# When this list is empty, Claude picks its own ideas from your video topic.\n' });
+    S.topicSet = true; brief = next;
+    if (!inDash) go('ready');
+  }, 'Saved. The next video follows this ✓');
 }
 
 function renderReady() {
@@ -222,7 +274,7 @@ function renderTeamKeys() {
 }
 
 // ================= DASHBOARD =================
-const DASH = [['home', 'Home'], ['ideas', 'Video ideas'], ['channel', 'Channel style'], ['accounts-d', 'Accounts'], ['settings', 'Settings']];
+const DASH = [['home', 'Home'], ['ideas', 'Video ideas'], ['channel', 'Video topic'], ['accounts-d', 'Accounts'], ['settings', 'Settings']];
 function dashShell(inner) {
   app.innerHTML = `<div class="shell">
     <aside class="side">
@@ -313,7 +365,7 @@ async function renderFileEditor(title, help, file, placeholder) {
   dashShell(`<h1>${title}</h1><p class="muted"><span class="spin"></span> Loading…</p>`);
   let text = '';
   try { text = await window.va.readFile({ path: file }); } catch (e) { toast(e.message, 6000); }
-  if (!['ideas', 'channel'].includes(view)) return;
+  if (!['ideas', 'channel-raw'].includes(view)) return;
   dashShell(`<h1>${title}</h1><p>${help}</p>
     <div class="card"><textarea id="ed" placeholder="${esc(placeholder)}">${esc(text)}</textarea>
     <div class="row" style="margin-top:12px"><button class="btn" id="save">Save</button></div><div class="err"></div></div>`);
@@ -378,7 +430,8 @@ function render() {
     welcome: renderWelcome, github: renderGitHub, claude: () => renderClaude(false), accounts: renderAccounts, ready: renderReady,
     teamkeys: renderTeamKeys, home: renderHome, 'accounts-d': renderAccountsDash, settings: renderSettings, 'claude-d': renderClaudeDash,
     ideas: () => renderFileEditor('Video ideas', 'One idea per line. The autopilot uses them from the top and crosses each one off. When the list is empty, Claude picks ideas itself, continuing your series.', 'autopilot/topics.txt', 'Zombie plane, part 4\nWhy do cats purr?'),
-    channel: () => renderFileEditor('Channel style', 'Claude reads this before every video. Describe your channel, your story series, the tone and anything to avoid.', 'autopilot/channel.md', '# My channel…'),
+    channel: () => renderTopic(true), topic: () => renderTopic(false),
+    'channel-raw': () => renderFileEditor('Full channel brief', 'Everything Claude reads before each video, including the safety rules. Most people only need the simple box on the previous page.', 'autopilot/channel.md', '# My channel…'),
   };
   (map[view] || renderWelcome)();
 }

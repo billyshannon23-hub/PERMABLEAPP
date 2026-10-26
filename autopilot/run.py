@@ -155,8 +155,8 @@ def main():
         name, topic = a.post_only, None
     else:
         maybe_fetch_framework()
-        topic = a.topic or pop_topic() or "Your choice: continue the most recent story series from history, " \
-            "or a fresh science explainer, following channel.md"
+        topic = a.topic or pop_topic() or "Your choice: pick the best next video for this channel based on the " \
+            "'What this channel is about' section of channel.md (continue a running series if there is one)"
         name = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None).strftime("%Y%m%d-%H%M") + "-" + slug(topic)
         generate(topic, name)
 

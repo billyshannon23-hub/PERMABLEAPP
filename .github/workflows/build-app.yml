@@ -12,6 +12,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: build-app
+  cancel-in-progress: true
+
 jobs:
   build:
     # Only build in the original repo (or when someone runs it by hand), not in every co-worker's copy.
