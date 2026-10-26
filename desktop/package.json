@@ -1,7 +1,7 @@
 {
   "name": "video-autopilot",
   "productName": "Video Autopilot",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Makes and posts videos with the Permeable Framework, 3 a day.",
   "main": "main.js",
   "author": "billyshannon23-hub",
@@ -9,22 +9,58 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --publish never"
+    "dist": "electron-builder --publish never",
+    "test": "node test/check.js"
   },
   "devDependencies": {
     "electron": "^33.2.0",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "playwright-core": "^1.48.0"
   },
   "build": {
     "appId": "com.permeable.videoautopilot",
     "productName": "Video Autopilot",
     "artifactName": "Video-Autopilot-${os}.${ext}",
-    "directories": { "buildResources": "build", "output": "dist" },
-    "files": ["main.js", "preload.js", "lib/**", "renderer/**", "build/icon.png"],
-    "win": { "target": "nsis", "icon": "build/icon.png" },
-    "nsis": { "oneClick": true, "perMachine": false, "artifactName": "Video-Autopilot-Setup.${ext}" },
-    "mac": { "target": [{ "target": "dmg", "arch": ["universal"] }], "icon": "build/icon.png", "category": "public.app-category.video", "identity": "-" },
-    "dmg": { "artifactName": "Video-Autopilot-Mac.${ext}" },
-    "linux": { "target": "AppImage", "icon": "build/icon.png", "category": "Video" }
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "lib/**",
+      "renderer/**",
+      "build/icon.png"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "Video-Autopilot-Setup.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.video",
+      "identity": "-"
+    },
+    "dmg": {
+      "artifactName": "Video-Autopilot-Mac.${ext}"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "build/icon.png",
+      "category": "Video"
+    }
   }
 }

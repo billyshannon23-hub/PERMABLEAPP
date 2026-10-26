@@ -453,7 +453,14 @@ function render() {
   (map[view] || renderWelcome)();
 }
 (async () => {
-  await refresh();
-  view = S.setupDone && S.github ? 'home' : S.github ? (S.accounts.claude ? 'accounts' : 'claude') : 'welcome';
-  render();
+  try {
+    await refresh();
+    view = S.setupDone && S.github ? 'home' : S.github ? (S.accounts.claude ? 'accounts' : 'claude') : 'welcome';
+    render();
+  } catch (e) {
+    app.innerHTML = `<div class="hero"><h1>Something went wrong</h1><p>${esc(e.message)}</p>
+      <p class="muted">Close the app and open it again. If this keeps happening, send a screenshot of this screen.</p></div>`;
+  }
 })();
+window.addEventListener('error', (e) => toast('Error: ' + e.message, 8000));
+window.addEventListener('unhandledrejection', (e) => toast('Error: ' + (e.reason && e.reason.message || e.reason), 8000));
