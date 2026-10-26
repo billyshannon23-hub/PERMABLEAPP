@@ -46,7 +46,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [windows-latest, macos-13]  # macos-13 (Intel) has more free machines; the build is universal
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -76,6 +76,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
+          pattern: app-*
           path: files
           merge-multiple: true
       - name: Publish to the "app" release
