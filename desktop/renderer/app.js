@@ -171,13 +171,21 @@ Mix three kinds of video:
 2. True stories from history and science, like Ötzi the Iceman, the 5,300-year-old man hikers found frozen in the Alps.
 3. Staying safe: real risks explained calmly, like how people get scammed or approached by strangers on games like Roblox, how to spot it, and what to do (block, report, tell a trusted adult).
 
-Audience: curious teens and adults, and parents watching with kids. Family-friendly.`],
+Audience: curious teens and adults.`],
   ['Safety for kids & parents', `Safety videos for kids, teens and parents. Online safety (scams, strangers in games like Roblox, sharing personal info, cyberbullying), home safety, outdoor and weather safety, and first-aid basics. Calm, practical and never scary: always end with clear steps to take. Family-friendly.`],
   ['Science explainers', `Short science explainers: one question a viewer would actually ask (why is the sky blue, how do vaccines work, what is a black hole), answered plainly with a clear mechanism and a surprising fact.`],
   ['History mysteries', `True stories from history and archaeology told like mysteries: famous discoveries, lost cities, preserved bodies like Ötzi the Iceman, shipwrecks. Hook, mystery, what scientists found out. Accurate and respectful.`],
-  ['Zombies & scary stories', `Second-person survival stories ("You were sitting in seat 23C when…"), like a zombie outbreak on a plane, a cruise ship or an oil rig, or an alien invasion. Run them as series: each part continues the last and ends on a cliffhanger. Every survival detail (water, food, injuries, physics) follows real science. Spooky and tense, never gory.`],
+  ['Zombies & scary stories', `Second-person survival stories ("You were sitting in seat 23C when…"), like a zombie outbreak on a plane, a cruise ship or an oil rig, or an alien invasion. Run them as series: each part continues the last and ends on a cliffhanger. Every survival detail (water, food, injuries, physics) follows real science. Scary and intense, PG-13.`],
 ];
 const FOCUS_RE = /<!-- FOCUS START -->[\s\S]*?<!-- FOCUS END -->/;
+const RATING_RE = /<!-- RATING START -->[\s\S]*?<!-- RATING END -->/;
+const RATINGS = {
+  pg13: `- Content rating: **PG-13**. Scary, intense, dark or mature themes are fine, like a TV drama or a horror movie
+  trailer, as long as it stays within TikTok and YouTube community guidelines. Nothing R-rated: no graphic gore
+  or close-up injuries, no sexual content, no strong swearing, nothing that glorifies self-harm or real violence.`,
+  family: `- Content rating: **Family-friendly**. Safe for kids to watch: nothing gory, graphic or frightening for young children,
+  no swearing. Tension comes from the story, not violence.`,
+};
 async function renderTopic(inDash) {
   const shell = inDash ? dashShell : setupShell;
   shell(`<h1>Video topic</h1><p class="muted"><span class="spin"></span> Loading…</p>`);
@@ -185,6 +193,7 @@ async function renderTopic(inDash) {
   try { brief = await window.va.readFile({ path: 'autopilot/channel.md' }); } catch (e) { toast(e.message, 6000); }
   if (!['topic', 'channel'].includes(view)) return;
   const m = brief.match(FOCUS_RE);
+  const rating = /RATING START -->\s*- Content rating: \*\*Family/.test(brief) ? 'family' : 'pg13';
   const current = m ? m[0].replace(/<!-- FOCUS (START|END) -->/g, '').replace(/^\s*## What this channel is about\s*/, '').trim() : PRESETS[0][1];
   shell(`<h1>${inDash ? 'Video topic' : 'Step 4 · What to make'}</h1>
     <p>Tell Claude what your videos should be about. Pick a starting point or write your own, like <i>"make content about zombies and scary stories"</i>. You can change it any time.</p>
@@ -193,19 +202,27 @@ async function renderTopic(inDash) {
       <div class="row" style="margin-bottom:14px">${PRESETS.map(([n], i) => `<button class="btn ghost small" data-pre="${i}">${esc(n)}</button>`).join('')}</div>
       <label class="f" for="focus">What should your videos be about?</label>
       <textarea id="focus" style="min-height:220px;font-family:var(--sans);font-size:15px">${esc(current)}</textarea>
+      <label class="f" style="margin-top:16px">Content rating</label>
+      <div class="row" id="rating">
+        <label class="switch"><input type="radio" name="rt" value="pg13" ${rating === 'pg13' ? 'checked' : ''}><span class="t"></span><span><b>PG-13</b>: scary, intense and mature themes OK. Nothing R-rated.</span></label>
+        <label class="switch"><input type="radio" name="rt" value="family" ${rating === 'family' ? 'checked' : ''}><span class="t"></span><span><b>Family-friendly</b>: safe for kids to watch</span></label>
+      </div>
       <label class="switch" style="margin-top:12px"><input type="checkbox" id="clr"><span class="t"></span>Also clear my list of upcoming video ideas (so Claude starts fresh on this topic)</label>
       <div class="row" style="margin-top:14px"><button class="btn" id="save">${inDash ? 'Save' : 'Save and continue'}</button>
         ${inDash ? `<button class="link" id="raw">Edit the full brief and safety rules</button>` : ''}</div>
       <div class="err"></div>
     </div>
-    <p class="muted">Facts are always checked, and videos stay family-friendly with no gore, whatever the topic.</p>`);
+    <p class="muted">Facts are always checked, and videos always stay within TikTok and YouTube rules.</p>`);
   app.querySelectorAll('[data-pre]').forEach(b => b.onclick = () => { $('#focus').value = PRESETS[+b.dataset.pre][1]; $('#clr').checked = true; });
   $('#focus').oninput = () => { $('#clr').checked = true; };
   if ($('#raw')) $('#raw').onclick = () => go('channel-raw');
   $('#save').onclick = (e) => busy(e.currentTarget, async () => {
     const text = $('#focus').value.trim(); if (!text) throw new Error('Write a sentence about what to make.');
     const block = `<!-- FOCUS START -->\n## What this channel is about\n${text}\n<!-- FOCUS END -->`;
-    const next = FOCUS_RE.test(brief) ? brief.replace(FOCUS_RE, () => block) : `# Channel brief\n\n${block}\n\n${brief}`;
+    let next = FOCUS_RE.test(brief) ? brief.replace(FOCUS_RE, () => block) : `# Channel brief\n\n${block}\n\n${brief}`;
+    const rt = app.querySelector('input[name=rt]:checked')?.value || 'pg13';
+    const rblock = `<!-- RATING START -->\n${RATINGS[rt]}\n<!-- RATING END -->`;
+    next = RATING_RE.test(next) ? next.replace(RATING_RE, () => rblock) : next.replace('## Rules (always apply)\n', () => `## Rules (always apply)\n${rblock}\n`);
     await window.va.writeFile({ path: 'autopilot/channel.md', text: next });
     if ($('#clr').checked) await window.va.writeFile({ path: 'autopilot/topics.txt',
       text: '# One video idea per line. The autopilot takes the top line each run and deletes it.\n# When this list is empty, Claude picks its own ideas from your video topic.\n' });
