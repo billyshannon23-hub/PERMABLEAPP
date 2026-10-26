@@ -88,7 +88,7 @@ video { width: 240px; aspect-ratio: 9 / 16; object-fit: contain; border: 2px sol
 details { border: 1.5px dashed var(--ink-3); border-radius: 9px; padding: 10px 14px; margin-top: 10px; }
 summary { cursor: pointer; font-family: var(--mono); font-size: 13px; text-transform: uppercase; }
 .muted { color: var(--ink-3); font-size: 13px; }
-.hero { text-align: center; padding: 50px 20px 20px; }
+.hero { text-align: center; padding: 10px 20px 20px; }
 .hero .logo { width: 120px; height: 120px; margin: 0 auto 22px; }
 .hero p { max-width: 520px; margin: 0 auto 1em; font-size: 16px; }
 
@@ -103,3 +103,16 @@ summary { cursor: pointer; font-family: var(--mono); font-size: 13px; text-trans
   .main { padding: 24px 18px; }
   .grid3, .video-view { grid-template-columns: 1fr; }
 }
+
+/* Bellhead */
+.bh-walker { position: fixed; bottom: 4px; left: 260px; width: 90px; height: 130px; z-index: 8; cursor: pointer;
+  background: url(bellhead.png) 0 0 / 1440px 130px no-repeat; image-rendering: pixelated; }
+.bh-walker:hover { filter: drop-shadow(0 0 0 var(--ink)); }
+.bh-bubble { position: absolute; bottom: 128px; left: 50%; margin-left: -110px; width: 220px; background: var(--paper); border: 2px solid var(--ink);
+  border-radius: 12px; padding: 8px 11px; font: 12px/1.35 var(--mono); color: var(--ink); text-align: center; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.bh-bubble::after { content: ""; position: absolute; bottom: -9px; left: 50%; margin-left: -8px; border: 8px solid transparent; border-top-color: var(--ink); border-bottom: 0; }
+.bh-bubble.show { opacity: 1; }
+.bh-hero { width: 180px; height: 260px; margin: 0 auto 10px; background: url(bellhead.png) 0 0 / 2880px 260px no-repeat; image-rendering: pixelated; animation: bhwave 0.75s steps(6) infinite; background-position-x: -1440px; }
+@keyframes bhwave { from { background-position-x: -1440px; } to { background-position-x: -2520px; } }
+@media (prefers-reduced-motion: reduce) { .bh-hero { animation: none; } }
+.main { padding-bottom: 160px; }

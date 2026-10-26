@@ -33,7 +33,7 @@ function setupShell(inner) {
   const i = SETUP.indexOf(view);
   app.innerHTML = `<div class="shell">
     <aside class="side">
-      <div class="brand"><img class="logo" src="../build/icon.png" alt="">Video<br>Autopilot</div>
+      <div class="brand"><img class="logo" src="logo.png" alt="">Video<br>Autopilot</div>
       ${SETUP.map((k, n) => `<button class="nav ${k === view ? 'on' : ''} ${stepDone(k) ? 'done' : ''}" data-go="${k}" ${n > i && !canGo(k) ? 'disabled style="opacity:.45"' : ''}>
         <span class="n">${stepDone(k) ? '✓' : n + 1}</span>${SETUP_LABEL[k]}</button>`).join('')}
       <div class="grow"></div><small>Set up once. After that, videos make themselves.</small>
@@ -47,7 +47,7 @@ function go(v) { view = v; render(); }
 
 function renderWelcome() {
   setupShell(`<div class="hero">
-    <img class="logo" src="../build/icon.png" alt="">
+    <div class="bh-hero" aria-hidden="true"></div>
     <h1>Video Autopilot</h1>
     <p>Makes <b>3 narrated videos a day</b> with the Permeable Framework and posts them to YouTube Shorts, Instagram Reels and TikTok, even while your computer is off.</p>
     <p class="muted">Setup takes about 5 minutes. You'll need: a free GitHub account, a Claude key, and your social accounts.</p>
@@ -232,7 +232,7 @@ async function renderTopic(inDash) {
 }
 
 function renderReady() {
-  setupShell(`<div class="hero"><img class="logo" src="../build/icon.png" alt="">
+  setupShell(`<div class="hero"><img class="logo" src="logo.png" alt="">
     <h1>You're all set</h1>
     <p>Your autopilot will make <b>3 videos a day</b>. Before it posts anything, make one <b>test video</b> to see how it looks. It takes about 15–30 minutes and won't be posted.</p>
     <div class="row" style="justify-content:center;margin-top:20px">
@@ -295,7 +295,7 @@ const DASH = [['home', 'Home'], ['ideas', 'Video ideas'], ['channel', 'Video top
 function dashShell(inner) {
   app.innerHTML = `<div class="shell">
     <aside class="side">
-      <div class="brand"><img class="logo" src="../build/icon.png" alt="">Video<br>Autopilot</div>
+      <div class="brand"><img class="logo" src="logo.png" alt="">Video<br>Autopilot</div>
       ${DASH.map(([k, l]) => `<button class="nav ${k === view ? 'on' : ''}" data-go="${k}">${l}</button>`).join('')}
       <div class="grow"></div><small>${esc(S.login || '')}</small>
     </aside>
@@ -464,3 +464,45 @@ function render() {
 })();
 window.addEventListener('error', (e) => toast('Error: ' + e.message, 8000));
 window.addEventListener('unhandledrejection', (e) => toast('Error: ' + (e.reason && e.reason.message || e.reason), 8000));
+
+
+// ================= BELLHEAD =================
+// Sprite sheet made with the framework's own Bellhead engine: frames 0-7 walk, 8-13 wave, 14-15 idle.
+const BHF = { w: 225, h: 325, walk: [0, 1, 2, 3, 4, 5, 6, 7], wave: [8, 9, 10, 11, 12, 13], idle: [14, 15, 14, 14, 15, 14] };
+const BH_LINES = ['Making your next video!', 'Did you know? A hiccup is your diaphragm twitching.', 'Ötzi says hi. He waited 5,300 years.',
+  'Never share your password, not even for free Robux.', 'Three videos a day. I never sleep.', 'Try a new topic on the Video topic page!',
+  'Fun fact: goosebumps made our furry ancestors look bigger.', 'Psst. Check your ideas list.'];
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function startWalker() {
+  const el = document.createElement('div'); el.className = 'bh-walker'; el.title = 'Bellhead';
+  const bub = document.createElement('div'); bub.className = 'bh-bubble'; el.appendChild(bub);
+  document.body.appendChild(el);
+  const SC = 0.4, W = BHF.w * SC;
+  let x = 260, dir = 1, mode = 'walk', fi = 0, modeLeft = 6, tick = 0, bubbleT = 0;
+  const set = (f) => { el.style.backgroundPosition = `${-f * W}px 0`; };
+  const say = (txt, secs = 4) => { bub.textContent = txt; bub.classList.add('show'); bubbleT = secs * 8; };
+  el.onclick = () => { mode = 'wave'; modeLeft = 2.5; fi = 0; say(BH_LINES[Math.floor(Math.random() * BH_LINES.length)]); };
+  if (reduceMotion) { set(BHF.idle[0]); el.style.left = '250px'; return; }
+  setInterval(() => {
+    tick++;
+    const seq = BHF[mode]; fi = (fi + 1) % seq.length; set(seq[fi]);
+    if (mode === 'walk') {
+      const maxX = innerWidth - W - 10;
+      x += dir * 6;
+      if (x > maxX) { x = maxX; dir = -1; } if (x < 10) { x = 10; dir = 1; }
+      el.style.left = x + 'px'; el.style.transform = dir < 0 ? 'scaleX(-1)' : 'none';
+      bub.style.transform = dir < 0 ? 'scaleX(-1)' : 'none';
+    } else { el.style.transform = 'none'; bub.style.transform = 'none'; }
+    modeLeft -= 1 / 8;
+    if (modeLeft <= 0) {
+      const r = Math.random();
+      if (mode !== 'walk') { mode = 'walk'; modeLeft = 4 + Math.random() * 8; if (Math.random() < 0.5) dir = -dir; }
+      else if (r < 0.25) { mode = 'wave'; modeLeft = 1.5; }
+      else { mode = 'idle'; modeLeft = 2 + Math.random() * 3; if (Math.random() < 0.3) say(BH_LINES[Math.floor(Math.random() * BH_LINES.length)]); }
+      fi = 0;
+    }
+    if (bubbleT > 0 && --bubbleT === 0) bub.classList.remove('show');
+  }, 125);
+}
+startWalker();
