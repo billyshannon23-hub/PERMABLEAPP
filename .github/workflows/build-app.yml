@@ -32,12 +32,13 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm test
       - run: mkdir -p dist && xvfb-run --auto-servernum node test/smoke.js
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: smoke-screenshot
-          path: desktop/dist/smoke.png
-          if-no-files-found: ignore
+      - name: Make sure the download page exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view app --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create app --repo "$GITHUB_REPOSITORY" --title "Video Autopilot app" --latest \
+              --notes "Download **Video-Autopilot-Setup.exe** for Windows or **Video-Autopilot-Mac.dmg** for Mac, open it, and follow the steps."
 
   build:
     needs: smoke
@@ -48,6 +49,7 @@ jobs:
       matrix:
         os: [windows-latest, macos-13]  # macos-13 (Intel) has more free machines; the build is universal
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
     defaults:
       run:
         working-directory: desktop
@@ -61,31 +63,13 @@ jobs:
       - run: npx electron-builder --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: app-${{ matrix.os }}
-          path: |
-            desktop/dist/*.exe
-            desktop/dist/*.dmg
-          if-no-files-found: error
-
-  release:
-    needs: [smoke, build]
-    if: always() && needs.smoke.result == 'success' && (github.event_name == 'workflow_dispatch' || github.event.repository.is_template || github.repository == 'billyshannon23-hub/PERMABLEAPP')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: app-*
-          path: files
-          merge-multiple: true
-      - name: Publish to the "app" release
+      # each installer goes up as soon as it's built, so Windows never waits for a Mac machine
+      - name: Publish to the download page
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
         run: |
-          ls -la files || { echo 'No installers were built'; exit 1; }
-          gh release view app --repo "$REPO" >/dev/null 2>&1 || \
-            gh release create app --repo "$REPO" --title "Video Autopilot app" --latest \
-              --notes "Download **Video-Autopilot-Setup.exe** for Windows or **Video-Autopilot-Mac.dmg** for Mac, open it, and follow the steps."
-          gh release upload app files/* --repo "$REPO" --clobber
+          shopt -s nullglob
+          files=(dist/*.exe dist/*.dmg)
+          ls -la "${files[@]}"
+          gh release upload app "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
