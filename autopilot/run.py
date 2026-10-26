@@ -61,15 +61,24 @@ def history():
     return [json.loads(l) for l in HISTORY.read_text().splitlines() if l.strip()]
 
 
-def pop_topic():
+def next_topic():
+    """The top idea on the list (not removed yet: that only happens once its video is made)."""
     if not TOPICS.exists():
         return None
-    lines = TOPICS.read_text().splitlines()
-    for i, l in enumerate(lines):
+    for l in TOPICS.read_text().splitlines():
         if l.strip() and not l.lstrip().startswith("#"):
-            TOPICS.write_text("\n".join(lines[:i] + lines[i + 1:]) + "\n")
             return l.strip()
     return None
+
+
+def cross_off(topic):
+    if not topic or not TOPICS.exists():
+        return
+    lines = TOPICS.read_text().splitlines()
+    for i, l in enumerate(lines):
+        if l.strip() == topic:
+            TOPICS.write_text("\n".join(lines[:i] + lines[i + 1:]) + "\n")
+            return
 
 
 def slug(s):
@@ -103,9 +112,11 @@ Do not post anything anywhere. Do not edit files outside projects/{name}, voice/
 """
 
 
+def claude_connected():
+    return bool(os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or os.environ.get("ANTHROPIC_API_KEY"))
+
+
 def generate(topic, name):
-    if not (os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or os.environ.get("ANTHROPIC_API_KEY")):
-        sys.exit("No Claude connected: set CLAUDE_CODE_OAUTH_TOKEN (subscription) or ANTHROPIC_API_KEY.")
     prompt = PROMPT.format(topic=topic, name=name)
     cmd = ["claude", "-p", prompt, "--dangerously-skip-permissions",
            "--max-turns", os.environ.get("CLAUDE_MAX_TURNS", "150"), "--output-format", "text"]
@@ -154,11 +165,18 @@ def main():
     if a.post_only:
         name, topic = a.post_only, None
     else:
+        if not claude_connected():
+            print("::warning::Skipped: Claude isn't connected yet. Open the Video Autopilot app and finish setup.")
+            log("Claude isn't connected yet, so no video was made. Finish setup in the Video Autopilot app.")
+            return
         maybe_fetch_framework()
-        topic = a.topic or pop_topic() or "Your choice: pick the best next video for this channel based on the " \
+        listed = None if a.topic else next_topic()
+        topic = a.topic or listed or "Your choice: pick the best next video for this channel based on the " \
             "'What this channel is about' section of channel.md (continue a running series if there is one)"
         name = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None).strftime("%Y%m%d-%H%M") + "-" + slug(topic)
         generate(topic, name)
+        load_outputs(name)  # stops here if the video wasn't made, leaving the idea on the list
+        cross_off(listed)
 
     mp4, meta = load_outputs(name)
     check_video(mp4)
