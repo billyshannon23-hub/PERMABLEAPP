@@ -1,11 +1,22 @@
 # Video Autopilot (Permeable Framework)
 
-**Makes 3 videos a day with the Permeable Framework and posts them to YouTube Shorts, Instagram Reels and TikTok.** Anyone can run their own copy with their own Claude and accounts → **start with [SETUP.md](SETUP.md).**
+**Makes 3 narrated videos a day with the Permeable Framework and posts them to YouTube Shorts, Instagram Reels and TikTok.**
 
-- `autopilot/channel.md`: your channel brief · `autopilot/topics.txt`: idea queue · `autopilot/connect.py`: link Claude + accounts
-- `.github/workflows/make-videos.yml`: the schedule
+## ⬇️ Get the app
 
-The framework itself is documented below.
+| Windows | Mac |
+|---|---|
+| [**Download Video-Autopilot-Setup.exe**](https://github.com/billyshannon23-hub/PERMABLEAPP/releases/download/app/Video-Autopilot-Setup.exe) | [**Download Video-Autopilot-Mac.dmg**](https://github.com/billyshannon23-hub/PERMABLEAPP/releases/download/app/Video-Autopilot-Mac.dmg) |
+
+Open it and follow the steps on screen. You never need a command prompt.
+
+- **Windows:** if a blue "Windows protected your PC" box appears, click **More info → Run anyway**. The app isn't from the Microsoft Store, so Windows asks first.
+- **Mac:** drag the app to Applications. The first time you open it, macOS blocks it; go to **System Settings → Privacy & Security** and click **Open Anyway**.
+
+**Co-workers:** ask the person who set this up for the **team-keys.json** file, then choose **Import team keys** in the app.
+Everyone gets their own copy, uses their own Claude, and posts to their own accounts.
+
+Power users can still do everything by hand: see [SETUP.md](SETUP.md).
 
 ---
 

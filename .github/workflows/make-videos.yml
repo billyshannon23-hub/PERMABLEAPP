@@ -2,7 +2,7 @@ name: Make videos
 
 on:
   schedule:
-    # Three videos a day. Times are UTC: 15:17, 19:17, 00:17 (9:17am, 1:17pm, 6:17pm Denver in winter).
+    # Video times, in UTC. Easiest to change from the Video Autopilot app (Settings → Posting times).
     # Change these to suit your audience. GitHub may start scheduled runs a few minutes late.
     - cron: "17 15 * * *"
     - cron: "17 19 * * *"

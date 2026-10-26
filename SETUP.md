@@ -1,5 +1,7 @@
 # Video Autopilot: setup
 
+> **The easy way is the desktop app.** Download it from the [README](README.md) and follow the steps on screen. This page is the manual way, for people who like the command line.
+
 This repo makes **3 videos a day** with the Permeable Framework and posts them to **YouTube Shorts, Instagram Reels and TikTok**.
 It runs on GitHub Actions, so nothing has to stay on your computer. Each person runs **their own copy**, with their own Claude, their own accounts and their own channel.
 

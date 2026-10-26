@@ -1,0 +1,62 @@
+name: Build desktop app
+
+# Builds the Video Autopilot installers and puts them on the "app" release page:
+#   https://github.com/<you>/<repo>/releases/tag/app
+# Runs when the app's code changes in the main (template) repo, or by hand from the Actions tab.
+on:
+  push:
+    branches: [main]
+    paths: ["desktop/**", ".github/workflows/build-app.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    # Only build in the original repo (or when someone runs it by hand), not in every co-worker's copy.
+    if: github.event_name == 'workflow_dispatch' || github.event.repository.is_template || github.repository == 'billyshannon23-hub/PERMABLEAPP'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: npx electron-builder --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-${{ matrix.os }}
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/*.dmg
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: always() && (github.event_name == 'workflow_dispatch' || github.event.repository.is_template || github.repository == 'billyshannon23-hub/PERMABLEAPP')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: files
+          merge-multiple: true
+      - name: Publish to the "app" release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          ls -la files || { echo 'No installers were built'; exit 1; }
+          gh release view app --repo "$REPO" >/dev/null 2>&1 || \
+            gh release create app --repo "$REPO" --title "Video Autopilot app" --latest \
+              --notes "Download **Video-Autopilot-Setup.exe** for Windows or **Video-Autopilot-Mac.dmg** for Mac, open it, and follow the steps."
+          gh release upload app files/* --repo "$REPO" --clobber
