@@ -1,0 +1,9 @@
+{
+  "preset": "calm",
+  "pitch": 0.0,
+  "rate": 1.0,
+  "seed": 7,
+  "note": "The one voice every video uses. engine 'deep' = flite pronunciation + our own rebuilt voice. Set engine to 'classic' for version 1.",
+  "engine": "deep",
+  "timbre": "classic"
+}

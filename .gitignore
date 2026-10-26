@@ -1,0 +1,16 @@
+projects/*/
+!projects/.keep
+out/
+**/f/
+**/fv/
+**/sim.html
+**/meta.json
+**/*.wav
+**/voice_timing.json
+**/voice_warp.json
+**/preview.png
+__pycache__/
+
+# autopilot
+!autopilot/history.jsonl
+.env

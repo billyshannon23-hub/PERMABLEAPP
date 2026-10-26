@@ -1,0 +1,8 @@
+# pronunciations the deep engine should use instead of flite's dictionary
+RAINN R EY1 N
+TEAR T EH1 R
+TEARS T EH1 R Z
+TORE T AO1 R
+CLOSE K L OW1 S
+MACROPHAGE M AE1 K R OW0 F EY2 JH
+MACROPHAGES M AE1 K R OW0 F EY2 JH IH0 Z

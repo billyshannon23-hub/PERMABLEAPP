@@ -1,0 +1,2 @@
+# your own pronunciations, one per line: WORD  ARPABET (stress 0 or 1 only)
+# example: OTZI  ER1 T S IY0

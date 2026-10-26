@@ -1,0 +1,94 @@
+name: Make videos
+
+on:
+  schedule:
+    # Three videos a day. Times are UTC: 15:17, 19:17, 00:17 (9:17am, 1:17pm, 6:17pm Denver in winter).
+    # Change these to suit your audience. GitHub may start scheduled runs a few minutes late.
+    - cron: "17 15 * * *"
+    - cron: "17 19 * * *"
+    - cron: "17 0 * * *"
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "Topic (leave blank for the next one in autopilot/topics.txt)"
+        required: false
+      dry_run:
+        description: "Make the video but don't post it"
+        type: boolean
+        default: false
+      post_to:
+        description: "Only these platforms, comma separated (youtube,instagram,tiktok). Blank = all connected"
+        required: false
+
+concurrency:
+  group: make-videos
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  make:
+    # Set the repo variable AUTOPILOT_PAUSED=true to pause the schedule without editing this file.
+    if: vars.AUTOPILOT_PAUSED != 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg libflite1
+          pip install -q -r requirements.txt requests
+          python3 -m playwright install --with-deps chromium
+          npm install -g @anthropic-ai/claude-code
+
+      - name: Make and post
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
+          FRAMEWORK_ZIP_URL: ${{ secrets.FRAMEWORK_ZIP_URL }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          YOUTUBE_PRIVACY: ${{ vars.YOUTUBE_PRIVACY }}
+          INSTAGRAM_USER_ID: ${{ secrets.INSTAGRAM_USER_ID }}
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+          TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
+          TIKTOK_MODE: ${{ vars.TIKTOK_MODE }}
+          TIKTOK_PRIVACY: ${{ vars.TIKTOK_PRIVACY }}
+          GH_ADMIN_TOKEN: ${{ secrets.GH_ADMIN_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run || vars.DRY_RUN }}
+          POST_TO: ${{ inputs.post_to }}
+          TOPIC: ${{ inputs.topic }}
+        run: |
+          if [ -n "$TOPIC" ]; then
+            python3 autopilot/run.py --topic "$TOPIC"
+          else
+            python3 autopilot/run.py
+          fi
+
+      - name: Keep the video
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-${{ github.run_number }}
+          path: |
+            out/*.mp4
+            out/*_sheet.png
+            projects/*/post.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Save history and topic list
+        if: always()
+        run: |
+          git config user.name "video-autopilot"
+          git config user.email "autopilot@users.noreply.github.com"
+          git add autopilot/history.jsonl autopilot/topics.txt voice/user_lexicon.txt 2>/dev/null || true
+          git commit -m "autopilot: video ${{ github.run_number }}" || exit 0
+          git pull --rebase -q && git push -q
